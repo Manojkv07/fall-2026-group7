@@ -35,14 +35,13 @@ The classification study retains the four tiers in the original proposal. Detect
 | Tier | Dataset | Planned setting |
 |---|---|---|
 | A: Controlled few-shot | [CIFAR-100](https://www.cs.toronto.edu/~kriz/cifar.html) | 5, 10, 20, and 50 training images per class; preserve the official test set |
-| B: Controlled long-tail | CIFAR-100-LT, constructed from CIFAR-100 | Exponential long-tail splits with imbalance ratios of 100, 50, and 10; include a reweighting comparison |
+| B: Controlled long-tail | [CIFAR-100-LT](https://github.com/richardaecn/class-balanced-loss#datasets), constructed from CIFAR-100 | Exponential long-tail splits with imbalance ratios of 100, 50, and 10; include a reweighting comparison |
 | C: Fine-grained low-data | [Oxford Flowers-102](https://www.robots.ox.ac.uk/~vgg/data/flowers/102/) | Documented low-data training, validation, and test protocol |
 | C: Fine-grained low-data | [CUB-200-2011](https://www.vision.caltech.edu/datasets/cub_200_2011/) | Documented low-data training, validation, and test protocol |
 | C: Fine-grained low-data | [Oxford-IIIT Pets](https://www.robots.ox.ac.uk/~vgg/data/pets/) | Documented low-data training, validation, and test protocol |
 | D: Naturally imbalanced medical data | [HAM10000](https://doi.org/10.7910/DVN/DBW86T) | Skin-lesion classification; keep images of the same lesion in one split |
 | Detection extension | Dataset to be finalized; COCO is a candidate | Images with object categories and bounding boxes |
 | Captioning extension | Dataset to be finalized; COCO is a candidate | Images with reference captions |
-
 ### Data and generator preparation
 
 We will use fixed training, validation, and test splits, with recorded seeds for few-shot and long-tail sampling. Classification loaders will share a common interface. Detection and captioning loaders will retain their task-specific annotations while using the same split and provenance records.
