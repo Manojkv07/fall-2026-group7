@@ -1,0 +1,45 @@
+# CIFAR-100-LT, imbalance ratio 100. Tier B.
+#
+# ~9,800 training images against Tier A 10-shot's 1,000, so this config uses
+# a larger step budget. That is a DIFFERENT budget, not an unfair one: every
+# condition within Tier B shares it, and Tier A and Tier B are never compared
+# to each other on raw accuracy.
+#
+# Read the results by class group, not by top-1. The head classes dominate
+# top-1 on a long tail, so a method can add a point of accuracy while the
+# tail gets worse. make_lt_splits.py records head/mid/tail groups in the
+# manifest for exactly this reason.
+
+data:
+  dataset: cifar100_lt
+  root: data/raw
+  manifest_dir: data/manifests
+  imbalance: 100           # presence of this key selects the Tier B manifest
+  n_max: 400               # divides evenly by 100/50/10 -> exact realised ratios
+  shots: null
+  selection_seed: 0
+
+model:
+  pretrained: false
+
+train:
+  max_steps: 8000
+  warmup_steps: 400
+  batch_size: 128
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 5.0e-4
+  label_smoothing: 0.0
+  grad_clip: 0.0
+  amp: true
+  deterministic: true
+  num_workers: 4
+  log_every: 400
+
+augment:
+  randaug_n: 2
+  randaug_m: 9
+  mix_alpha: 0.2
+
+output:
+  run_dir: results/runs

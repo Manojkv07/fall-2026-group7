@@ -14,7 +14,8 @@ __pycache__/
 *.key
 .aws/
 .vscode/
-data/
+data/*
+!data/manifests/
 runs/
 artifacts/
 checkpoints/
@@ -27,3 +28,18 @@ checkpoints/
 *.gz
 build/
 dist/
+
+# SynthAug-Bench
+data/raw/
+data/synthetic/
+data/gan_input/
+results/runs/*.json
+results/summary.csv
+results/run_matrix.csv
+results/generator_registry.csv
+results/figures/*.png
+results/gan/
+third_party/
+logs/
+__pycache__/
+*.py[cod]

@@ -1,0 +1,28 @@
+# Packages added on top of the course AMI's ~/dl-venv, which already ships a
+# CUDA build of torch/torchvision. Install with:
+#
+#     source ~/dl-venv/bin/activate
+#     pip install -r env/requirements.txt
+#
+# Do NOT pip install torch here: that would pull a CPU wheel over the AMI's
+# working CUDA build.
+#
+# After the environment passes scripts/check_env.py, freeze the exact
+# versions that were verified on the GPU:
+#
+#     pip freeze > env/tested-requirements.txt
+#
+# That frozen file, not this one, is the reproducibility record.
+
+timm>=1.0.0
+diffusers>=0.30.0
+accelerate>=1.0.0
+peft>=0.13.0
+safetensors>=0.4.0
+pycocotools>=2.0.7
+albumentations>=2.0.0
+clean-fid>=0.1.35
+pyyaml>=6.0
+tqdm>=4.66
+matplotlib>=3.8
+pandas>=2.0

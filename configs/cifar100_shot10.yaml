@@ -1,0 +1,38 @@
+# CIFAR-100, 10 shots per class. Tier A baseline.
+#
+# The budget below is in OPTIMIZER STEPS, not epochs. Every condition in the
+# run matrix uses the same max_steps so that adding synthetic images buys
+# more data, not more optimisation. Changing this number invalidates
+# comparability with runs already completed, so change it once and record it.
+
+data:
+  dataset: cifar100
+  root: data/raw
+  manifest_dir: data/manifests
+  shots: 10
+  selection_seed: 0        # which real images; separate from the training seed
+
+model:
+  pretrained: false        # pretraining imports outside knowledge -> a condition, not a default
+
+train:
+  max_steps: 4000          # THE budget. Not epochs.
+  warmup_steps: 200
+  batch_size: 128
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 5.0e-4
+  label_smoothing: 0.0
+  grad_clip: 0.0           # 0 disables
+  amp: true
+  deterministic: true
+  num_workers: 4
+  log_every: 200
+
+augment:
+  randaug_n: 2
+  randaug_m: 9
+  mix_alpha: 0.2           # Beta(alpha, alpha) for mixup / cutmix
+
+output:
+  run_dir: results/runs
