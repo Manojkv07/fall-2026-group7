@@ -11,6 +11,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+# Run as `python scripts/preview_manifest.py`, so the repo root is not on
+# sys.path the way it is under `python -m`. Add it before importing src.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import matplotlib
 
 matplotlib.use("Agg")  # headless: the instance has no display
