@@ -69,20 +69,60 @@ def inception_features(
 # --------------------------------------------------------------------------
 # FID
 # --------------------------------------------------------------------------
-def frechet_distance(feat_real: np.ndarray, feat_fake: np.ndarray) -> float:
-    """Frechet distance between two Gaussians fitted to the feature sets."""
+def _matrix_sqrt(mat: np.ndarray) -> np.ndarray:
+    """``scipy.linalg.sqrtm`` across SciPy versions.
+
+    SciPy dropped the ``disp`` keyword, which older FID implementations pass to
+    get ``(sqrt, errest)`` back instead of a printed warning. Call it whichever
+    way this SciPy supports and always return just the matrix.
+    """
     from scipy import linalg
 
+    try:
+        out = linalg.sqrtm(mat, disp=False)
+    except TypeError:
+        out = linalg.sqrtm(mat)
+    # Older SciPy returns (sqrt, errest); newer returns the array alone.
+    return out[0] if isinstance(out, tuple) else out
+
+
+def frechet_distance(
+    feat_real: np.ndarray, feat_fake: np.ndarray, eps: float = 1e-6
+) -> float:
+    """Frechet distance between two Gaussians fitted to the feature sets.
+
+    With a few thousand samples in 2048 dimensions the covariance estimates are
+    near-singular, so ``sqrtm`` of their product can come back with a tiny
+    imaginary part or non-finite entries. Both are numerical artefacts, not
+    signal: the standard remedy is to retry with a small ridge on the diagonal,
+    then take the real part — but only after checking the imaginary component
+    really is negligible, so a genuinely complex result is raised rather than
+    silently truncated into a plausible-looking number.
+    """
     mu_r, mu_f = feat_real.mean(axis=0), feat_fake.mean(axis=0)
     sigma_r = np.cov(feat_real, rowvar=False)
     sigma_f = np.cov(feat_fake, rowvar=False)
 
     diff = mu_r - mu_f
-    covmean, _ = linalg.sqrtm(sigma_r.dot(sigma_f), disp=False)
+    covmean = _matrix_sqrt(sigma_r.dot(sigma_f))
+
+    if not np.isfinite(covmean).all():
+        offset = np.eye(sigma_r.shape[0]) * eps
+        covmean = _matrix_sqrt((sigma_r + offset).dot(sigma_f + offset))
+
     if np.iscomplexobj(covmean):
+        imag_max = np.max(np.abs(covmean.imag))
+        if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
+            raise ValueError(
+                f"sqrtm returned a substantially complex matrix "
+                f"(max |imag| = {imag_max:.3g}); the covariance estimate is "
+                f"too ill-conditioned to trust this FID"
+            )
         covmean = covmean.real
 
-    return float(diff.dot(diff) + np.trace(sigma_r) + np.trace(sigma_f) - 2 * np.trace(covmean))
+    return float(
+        diff.dot(diff) + np.trace(sigma_r) + np.trace(sigma_f) - 2 * np.trace(covmean)
+    )
 
 
 def clean_fid(real_dir: str | Path, fake_dir: str | Path, **kwargs) -> float:

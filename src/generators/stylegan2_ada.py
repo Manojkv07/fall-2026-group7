@@ -49,13 +49,63 @@ REPO_DIR = Path("third_party/stylegan2-ada-pytorch")
 
 
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# Compatibility patches
+# --------------------------------------------------------------------------
+# The reference implementation was written against PyTorch 1.7-1.9 and is no
+# longer maintained. These are the minimal source edits needed to run it on a
+# modern PyTorch. Each is applied to the *clone*, which is gitignored, so they
+# are re-applied automatically rather than living as manual steps in a README
+# that a fresh checkout would miss.
+#
+# Only API-compatibility fixes belong here. Nothing that changes the model, the
+# training objective, or the augmentation pipeline — the point of using the
+# reference implementation is that the method stays the published one.
+COMPAT_PATCHES: list[tuple[str, str, str, str]] = [
+    (
+        "torch_utils/misc.py",
+        "        super().__init__(dataset)",
+        "        super().__init__()",
+        "Sampler.__init__ no longer accepts data_source (removed in PyTorch 2.2); "
+        "passing it now reaches object.__init__ and raises TypeError",
+    ),
+]
+
+
+def apply_compat_patches(repo: Path, verbose: bool = True) -> int:
+    """Apply the PyTorch-compatibility edits. Idempotent."""
+    applied = 0
+    for rel_path, old, new, why in COMPAT_PATCHES:
+        path = repo / rel_path
+        if not path.exists():
+            print(f"  patch target missing, skipping: {rel_path}")
+            continue
+
+        text = path.read_text()
+        if new in text and old not in text:
+            continue                      # already patched
+        if old not in text:
+            print(f"  patch no longer matches {rel_path} — upstream may have "
+                  f"changed; check manually")
+            continue
+
+        path.write_text(text.replace(old, new))
+        applied += 1
+        if verbose:
+            print(f"  patched {rel_path}: {why}")
+    return applied
+
+
 def ensure_repo() -> Path:
-    """Clone the reference implementation if it is not already present."""
-    if REPO_DIR.exists():
-        return REPO_DIR
-    REPO_DIR.parent.mkdir(parents=True, exist_ok=True)
-    print(f"cloning {REPO_URL} -> {REPO_DIR}")
-    subprocess.run(["git", "clone", "--depth", "1", REPO_URL, str(REPO_DIR)], check=True)
+    """Clone the reference implementation, then make it run on modern PyTorch."""
+    if not REPO_DIR.exists():
+        REPO_DIR.parent.mkdir(parents=True, exist_ok=True)
+        print(f"cloning {REPO_URL} -> {REPO_DIR}")
+        subprocess.run(
+            ["git", "clone", "--depth", "1", REPO_URL, str(REPO_DIR)], check=True
+        )
+    # Run every time: the clone is gitignored and may be recreated at any point.
+    apply_compat_patches(REPO_DIR)
     return REPO_DIR
 
 
