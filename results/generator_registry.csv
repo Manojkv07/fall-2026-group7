@@ -1,0 +1,2 @@
+generation_id,generator_family,tier,dataset,source_manifest,source_manifest_hash,resolution,fit_kimg_or_steps,fit_seconds,generation_seed,sampler,checkpoint_revision,n_images,generate_seconds,peak_vram_gb,storage_gb,fid,precision,recall,status,notes
+gan_cifar100_shot10_seed0,stylegan2_ada,A,cifar100,data/manifests/cifar100_shot10_seed0_train.json,8084e78af811a867,,,,0,stylegan_trunc1.0,results/gan/cifar100_shot10_seed0/00002-cifar100_shot10_seed0_32px-cond-mirror-auto1-kimg500-ada/network-snapshot-000000.pkl,5000,,,,230.528,0.813,0.0,collapsed,registered 2026-09-21

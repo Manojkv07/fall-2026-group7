@@ -33,10 +33,10 @@ dist/
 data/raw/
 data/synthetic/
 data/gan_input/
-results/runs/*.json
-results/summary.csv
-results/run_matrix.csv
-results/generator_registry.csv
+# Run records ARE committed: they are small, they carry the provenance
+# (config hash, git SHA, manifest hash, measured cost), and regenerating
+# them costs GPU hours. They are the evidence, not a build artifact.
+
 results/figures/*.png
 results/gan/
 third_party/
