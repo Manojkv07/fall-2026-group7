@@ -1,4 +1,4 @@
 generation_id,generator_family,tier,dataset,source_manifest,source_manifest_hash,resolution,fit_kimg_or_steps,fit_seconds,generation_seed,sampler,checkpoint_revision,n_images,generate_seconds,peak_vram_gb,storage_gb,fid,precision,recall,status,notes
 gan_cifar100_shot10_seed0,stylegan2_ada,A,cifar100,data/manifests/cifar100_shot10_seed0_train.json,8084e78af811a867,,,,0,stylegan_trunc1.0,results/gan/cifar100_shot10_seed0/00000-cifar100_shot10_seed0_32px-cond-mirror-auto1-kimg3000-ada/network-snapshot-000000.pkl,5000,,,,230.52,0.812,0.0,collapsed,registered 2026-09-21
 dcgan_cifar100_shot10_seed0,dcgan_diffaug,A,cifar100,data/manifests/cifar100_shot10_seed0_train.json,8084e78af811a867,,,,0,dcgan_ema,,5000,,,,130.521,0.82,0.007,collapsed,registered 2026-09-22
-ddpm_cifar100_shot10_seed0,ddpm,A,cifar100,data/manifests/cifar100_shot10_seed0_train.json,8084e78af811a867,,,,0,ddim_50,,5000,,,,65.963,0.805,0.373,done,registered 2026-09-22
+ddpm_cifar100_shot10_seed0,ddpm,A,cifar100,data/manifests/cifar100_shot10_seed0_train.json,8084e78af811a867,,,,0,ddim_50,,5000,,,,65.943,0.804,0.374,done,registered 2026-09-22
