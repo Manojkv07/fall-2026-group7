@@ -61,108 +61,75 @@ REPO_DIR = Path("third_party/stylegan2-ada-pytorch")
 # Only API-compatibility fixes belong here. Nothing that changes the model, the
 # training objective, or the augmentation pipeline — the point of using the
 # reference implementation is that the method stays the published one.
-# Written with NO leading indentation: the patcher re-indents it to match the
-# line it replaces. That line sits inside a try: block in the real file, so
-# hard-coding an indent level produces a SyntaxError.
-_PLUGIN_IMPORT_FIX = '''# PATCHED: cpp_extension.load() compiles the plugin, but since PyTorch 2.x it
-# loads the result from a file spec without registering the name or putting
-# the build directory on sys.path, so importing by name raises
-# ModuleNotFoundError for a .so that built perfectly well - and the caller
-# swallows that as "falling back to the slow reference implementation".
-#
-# The build directory is not guessed here. NVlabs uses either the default
-# location or a content-hashed subdirectory under it depending on whether
-# TORCH_EXTENSIONS_DIR is set, so this searches the extension tree for the
-# newest matching .so and loads it by path.
-import sys as _sys, os as _os, glob as _glob, importlib.util as _ilu
-module = None
-_roots = [_os.environ.get("TORCH_EXTENSIONS_DIR"),
-          _os.path.join(_os.path.expanduser("~"), ".cache", "torch_extensions")]
-for _root in _roots:
-    if not _root or not _os.path.isdir(_root):
-        continue
-    _hits = _glob.glob(_os.path.join(_root, "**", module_name + ".so"),
-                       recursive=True)
-    if _hits:
-        _so = max(_hits, key=_os.path.getmtime)
-        _spec = _ilu.spec_from_file_location(module_name, _so)
-        module = _ilu.module_from_spec(_spec)
-        _spec.loader.exec_module(module)
-        _sys.modules[module_name] = module
-        break
-if module is None:
-    module = importlib.import_module(module_name)'''
+_PLUGIN_IMPORT_FIX = '''    # PATCHED: cpp_extension.load() compiles the plugin, but since PyTorch 2.x
+    # it loads the result from a file spec without registering the name or
+    # putting the build directory on sys.path, so importing by name raises
+    # ModuleNotFoundError for a .so that built perfectly well — and the caller
+    # swallows that as "falling back to the slow reference implementation".
+    #
+    # The build directory is not guessed here. NVlabs may use the default
+    # location or a content-hashed subdirectory depending on whether
+    # TORCH_EXTENSIONS_DIR is set, so this searches the extension tree for the
+    # newest matching .so and loads it by path.
+    import sys as _sys, os as _os, glob as _glob, importlib.util as _ilu
+    module = None
+    _roots = [_os.environ.get("TORCH_EXTENSIONS_DIR"),
+              _os.path.join(_os.path.expanduser("~"), ".cache", "torch_extensions")]
+    for _root in _roots:
+        if not _root or not _os.path.isdir(_root):
+            continue
+        _hits = _glob.glob(_os.path.join(_root, "**", module_name + ".so"),
+                           recursive=True)
+        if _hits:
+            _so = max(_hits, key=_os.path.getmtime)
+            _spec = _ilu.spec_from_file_location(module_name, _so)
+            module = _ilu.module_from_spec(_spec)
+            _spec.loader.exec_module(module)
+            _sys.modules[module_name] = module
+            break
+    if module is None:
+        module = importlib.import_module(module_name)'''
 
-# (file, target line, replacement block, marker, why)
-#
-# The target is matched as a WHOLE LINE on its stripped content, and the
-# replacement is re-indented to that line's own indentation. Matching raw
-# substrings is what broke the previous attempt: the target line sits inside a
-# try: block at 8 spaces, a 4-space pattern matched its tail, and the
-# replacement landed under-indented as a SyntaxError.
-#
-# `marker` is a string unique to the replacement; its presence means the file
-# is already patched.
-COMPAT_PATCHES: list[tuple[str, str, str, str, str]] = [
+COMPAT_PATCHES: list[tuple[str, str, str, str]] = [
     (
         "torch_utils/misc.py",
-        "super().__init__(dataset)",
-        "super().__init__()",
-        "super().__init__()",
+        "        super().__init__(dataset)",
+        "        super().__init__()",
         "Sampler.__init__ no longer accepts data_source (removed in PyTorch 2.2); "
         "passing it now reaches object.__init__ and raises TypeError",
     ),
     (
         "torch_utils/custom_ops.py",
-        "module = importlib.import_module(module_name)",
+        "    module = importlib.import_module(module_name)",
         _PLUGIN_IMPORT_FIX,
-        "# PATCHED: cpp_extension.load()",
         "cpp_extension.load no longer makes the plugin importable by name, so "
         "the compiled .so was built and then never found",
     ),
 ]
 
 
-def _replace_line(text: str, target: str, block: str) -> str | None:
-    """Replace the line whose stripped content is ``target`` with ``block``.
-
-    The block is re-indented to the replaced line's indentation, so a patch
-    works wherever the line happens to sit — inside a try:, a loop, or at
-    module level. Returns None when the line is not found.
-    """
-    lines = text.splitlines(keepends=True)
-    for i, line in enumerate(lines):
-        if line.strip() != target:
-            continue
-        indent = line[: len(line) - len(line.lstrip())]
-        rebuilt = "\n".join(
-            (indent + b) if b.strip() else b for b in block.splitlines()
-        )
-        lines[i] = rebuilt + ("\n" if line.endswith("\n") else "")
-        return "".join(lines)
-    return None
-
-
 def apply_compat_patches(repo: Path, verbose: bool = True) -> int:
     """Apply the PyTorch-compatibility edits. Idempotent."""
     applied = 0
-    for rel_path, target, block, marker, why in COMPAT_PATCHES:
+    for rel_path, old, new, why in COMPAT_PATCHES:
         path = repo / rel_path
         if not path.exists():
             print(f"  patch target missing, skipping: {rel_path}")
             continue
 
         text = path.read_text()
-        if marker in text:
+        # Idempotency is checked on the REPLACEMENT, not the absence of the
+        # original: a patch that keeps the original line and only adds around
+        # it leaves `old` in the file, so "old is gone" would re-apply it on
+        # every call and stack duplicate copies.
+        if new in text:
             continue                      # already patched
-
-        patched = _replace_line(text, target, block)
-        if patched is None:
+        if old not in text:
             print(f"  patch no longer matches {rel_path} — upstream may have "
                   f"changed; check manually")
             continue
 
-        path.write_text(patched)
+        path.write_text(text.replace(old, new))
         applied += 1
         if verbose:
             print(f"  patched {rel_path}: {why}")

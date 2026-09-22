@@ -1,0 +1,19 @@
+{
+  "generator": "dcgan_diffaug",
+  "substituted_for": "stylegan2_ada",
+  "substitution_reason": "StyleGAN2-ADA's custom CUDA extensions do not build on this environment (PyTorch 2.13 / CUDA 13.1)",
+  "manifest": "data/manifests/cifar100_shot10_seed0_train.json",
+  "manifest_content_hash": "8084e78af811a867",
+  "n_train_images": 1000,
+  "n_classes": 100,
+  "steps": 4000,
+  "batch_size": 64,
+  "z_dim": 128,
+  "lr_g": 0.0002,
+  "lr_d": 0.0002,
+  "d_steps": 1,
+  "diffaugment_policy": "color,translation,cutout",
+  "training_seed": 0,
+  "g_parameters": 1473987,
+  "d_parameters": 1773377
+}

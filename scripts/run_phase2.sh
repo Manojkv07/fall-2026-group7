@@ -44,19 +44,55 @@ else
 fi
 
 # --- 2. train the generator -----------------------------------------------
-if [ ! -d "$GAN_OUT" ] || [ -z "$(find "$GAN_OUT" -name 'network-snapshot-*.pkl' 2>/dev/null)" ]; then
-  echo -e "\n=== 2/5  train StyleGAN2-ADA (${KIMG} kimg) ==="
+# StyleGAN2-ADA writes network-snapshot-000000.pkl BEFORE the first training
+# step. Treating any snapshot as "already trained" silently generates from a
+# randomly initialised network, which looks like a completed run and produces
+# entirely meaningless downstream numbers. So the resume check reads the kimg
+# out of the newest snapshot's filename and requires it to be non-zero.
+trained_kimg() {
+  local latest
+  latest=$(find "$1" -name 'network-snapshot-*.pkl' 2>/dev/null | sort | tail -1)
+  [ -z "$latest" ] && { echo 0; return; }
+  basename "$latest" .pkl | sed 's/network-snapshot-0*//' | grep -E '^[0-9]+$' || echo 0
+}
+
+HAVE_KIMG=$(trained_kimg "$GAN_OUT")
+
+if [ "$HAVE_KIMG" -lt 1 ]; then
+  if [ -d "$GAN_OUT" ]; then
+    echo -e "\n=== 2/5  found only an untrained (0 kimg) snapshot — retraining ==="
+  else
+    echo -e "\n=== 2/5  train StyleGAN2-ADA (${KIMG} kimg) ==="
+  fi
   echo "This is the long step. Run it inside tmux."
   python -m src.generators.stylegan2_ada train \
       --dataset "data/gan_input/${STEM}_32px.zip" \
       --outdir "$GAN_OUT" --kimg "$KIMG" --seed "$GEN_SEED" \
       2>&1 | tee "logs/gan_${STEM}.log"
+  HAVE_KIMG=$(trained_kimg "$GAN_OUT")
 else
-  echo -e "\n=== 2/5  generator already trained, skipping ==="
+  echo -e "\n=== 2/5  generator already trained to ${HAVE_KIMG} kimg, skipping ==="
+fi
+
+# Refuse to generate from a network that never trained. A silent pass here is
+# what made two earlier runs report confident, meaningless results.
+if [ "$HAVE_KIMG" -lt 1 ]; then
+  echo
+  echo "ABORT: no trained snapshot in $GAN_OUT (highest kimg = ${HAVE_KIMG})."
+  echo "Training produced nothing, so generating would sample an untrained"
+  echo "network and every downstream number would be meaningless."
+  echo "Check logs/gan_${STEM}.log — if the CUDA plugins fell back to the"
+  echo "reference implementations, training is likely too slow to reach tick 0."
+  exit 1
+fi
+
+if [ "$HAVE_KIMG" -lt "$KIMG" ]; then
+  echo "WARNING: snapshot is at ${HAVE_KIMG} kimg, ${KIMG} was requested."
+  echo "         Recording the ACTUAL budget, not the requested one."
 fi
 
 NETWORK=$(find "$GAN_OUT" -name 'network-snapshot-*.pkl' | sort | tail -1)
-echo "using snapshot: $NETWORK"
+echo "using snapshot: $NETWORK  (${HAVE_KIMG} kimg)"
 
 # --- 3. generate at the highest ratio, subsample for the rest -------------
 # Generating once at 5:1 and subsampling down to 2:1 and 1:1 keeps all three

@@ -1,0 +1,13 @@
+{
+  "manifest": "data/manifests/cifar100_shot10_seed0_train.json",
+  "manifest_content_hash": "8084e78af811a867",
+  "n_train_images": 1000,
+  "n_classes": 100,
+  "steps": 8000,
+  "batch_size": 128,
+  "lr": 0.0002,
+  "T": 1000,
+  "label_dropout": 0.1,
+  "training_seed": 0,
+  "parameters": 26028547
+}

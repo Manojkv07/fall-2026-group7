@@ -16,7 +16,7 @@ __pycache__/
 .vscode/
 data/*
 !data/manifests/
-runs/
+/runs/
 artifacts/
 checkpoints/
 *.pt
@@ -43,3 +43,7 @@ third_party/
 logs/
 __pycache__/
 *.py[cod]
+
+# Run records, summary and matrix ARE committed: they are small, they
+# carry the provenance (config hash, git SHA, manifest hash, measured
+# cost), and regenerating them costs GPU hours. They are the evidence.
